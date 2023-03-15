@@ -11,7 +11,11 @@ export const BACKUPS_VALIDATION_MESSAGES = {
   _id: "L'id del sollecito deve essere un valido id mongoDB",
 };
 
-export type BackupDocument = Document<unknown, {}, Backup>;
+export type BackupDocument = Document<unknown, {}, Backup> &
+  Backup &
+  Required<{
+    _id: Types.ObjectId;
+  }>;
 //1. Create a cache interface to represent the document in MongoDB
 export interface Backup {
   _id: Types.ObjectId;

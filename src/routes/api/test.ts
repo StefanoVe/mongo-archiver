@@ -10,14 +10,14 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   const database = DatabaseModel.build({
     alias: 'testDatabase',
-    uri: 'mongodb://localhost:27017/archiver',
+    uri: 'mongodb://localhost:27017/back-office',
   });
 
   await database.save().catch(genericErrorHandler);
 
   const result = CronJobModel.build({
     alias: 'testCronJob',
-    cronJob: '*/10 * * * *', // Every 10 minutes, every hour, every day
+    cronJob: '*/10 * * * *',
     databases: [database._id],
     recipient: 'stefano.vecchietti.99@gmail.com',
   });
@@ -26,8 +26,9 @@ router.get('/', async (req, res) => {
   await result.populate('databases').catch(genericErrorHandler);
 
   const _backupManager = await BackupManager.init(result);
+  await _backupManager.startJob().catch(genericErrorHandler);
 
-  await _backupManager.start().catch(genericErrorHandler);
+  // await _backupManager.sendToRecipient().catch(genericErrorHandler);
 
   res.send(_backupManager.data);
 });
