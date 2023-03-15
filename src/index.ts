@@ -1,8 +1,11 @@
 import { app } from './routes/app.js';
 import { connectToMainDB } from './services/connect.js';
+import { runSchedule } from './services/cron.schedule.js';
 import { colorfulLog, declareEnvs } from './services/service.utils.js';
 
 connectToMainDB();
+
+runSchedule();
 
 const { PORT } = declareEnvs(['PORT']);
 

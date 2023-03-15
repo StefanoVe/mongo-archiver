@@ -14,6 +14,7 @@ export interface CronJob {
   cronJob: string;
   recipient: string;
   databases: Types.ObjectId[];
+  enabled: boolean;
   //If there are references to IDs from other documents, use `Types.ObjectId`
 }
 
@@ -46,6 +47,10 @@ const CronJobSchema = new Schema<CronJob, CronJob>(
     alias: {
       type: String,
       required: true,
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
     },
   },
   {

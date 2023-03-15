@@ -13,10 +13,12 @@
     "express-validator": "^6.15.0"
   },
   "dependencies": {
+    "@types/node-cron": "^3.0.7",
     "cors": "^2.8.5",
     "date-fns": "^2.29.3",
     "express": "^4.18.2",
     "mongoose": "^7.0.1",
+    "node-cron": "^3.0.2",
     "nodemailer": "^6.9.1"
   }
 }
