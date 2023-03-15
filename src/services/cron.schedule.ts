@@ -1,5 +1,7 @@
 import * as cron from 'node-cron';
+import { genericErrorHandler } from '../errors/services/generic-error-handler.js';
 import { CronJobModel } from '../models/cron-job.js';
+import { BackupManager } from './backup/class.backup.js';
 import { asyncForEach } from './service.utils.js';
 
 export const runSchedule = async () => {
@@ -10,7 +12,16 @@ export const runSchedule = async () => {
   await asyncForEach(jobs, async (job) => {
     //for each job, schedule it with node-cron
     cron.schedule(job.cronJob, async () => {
-      console.log('job started');
+      //initiate the backup manager
+      const _backupManager = await BackupManager.init(job).catch(
+        genericErrorHandler
+      );
+
+      //backup the chosen collections
+      await _backupManager.startJob().catch(genericErrorHandler);
+
+      //send the backup to the recipient
+      await _backupManager.sendToRecipient().catch(genericErrorHandler);
     });
   });
 };
