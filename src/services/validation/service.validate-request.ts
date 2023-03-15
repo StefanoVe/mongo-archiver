@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { RequestValidationError } from '../error-handler/errors/request-validation-error.js';
+import { RequestValidationError } from '../../errors/errors/request-validation-error.js';
 
 // Per come funzionano i middleware in Express, si veda:
 // http://expressjs.com/en/guide/using-middleware.html#using-middleware

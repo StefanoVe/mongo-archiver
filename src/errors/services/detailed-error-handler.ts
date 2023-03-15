@@ -1,5 +1,8 @@
 import * as nodemailer from 'nodemailer';
-import { BadRequestError, RequiredEnvVariableError } from '../errors/index.js';
+import {
+  BadRequestError,
+  RequiredEnvVariableError,
+} from '../errors/index.js.js.js';
 
 const requiredEnvVariables = [
   'SMTP_HOST',

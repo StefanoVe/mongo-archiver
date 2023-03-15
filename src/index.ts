@@ -1,5 +1,8 @@
 import { app } from './routes/app.js';
+import { connectToMainDB } from './services/connect.js';
 import { colorfulLog, declareEnvs } from './services/service.utils.js';
+
+connectToMainDB();
 
 const { PORT } = declareEnvs(['PORT']);
 
