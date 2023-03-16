@@ -26,6 +26,7 @@ router.get(
       return res.status(404).send('backup not found');
     }
 
+    //create a file name with the alias of the cron job and the date timestamp of the backup
     const fileName = _clean(
       `${
         (backup.cronJob as unknown as CronJob).alias
@@ -34,7 +35,6 @@ router.get(
 
     if (backup.compression === EnumAvailableCompression.GZIP) {
       //convert the Unit8Array to JSON and overwrite backup.data
-
       backup.data = Pako.ungzip((backup.data as unknown as any).buffer, {
         to: 'string',
       });
@@ -48,6 +48,7 @@ router.get(
       //for each key, create a json file
       const _data = JSON.stringify(data[key]);
 
+      //add the file to the zip
       _zip.file(`${key}.json`, _data);
     });
 
