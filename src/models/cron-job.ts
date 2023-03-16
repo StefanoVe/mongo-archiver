@@ -1,4 +1,5 @@
 import { HydratedDocument, Model, model, Schema, Types } from 'mongoose';
+import { EnumAvailableCompression } from '../services/backup/class.backupmanager.js';
 
 export const CRON_JOB_VALIDATION_MESSAGES = {
   _id: "L'id del sollecito deve essere un valido id mongoDB",
@@ -15,6 +16,7 @@ export interface CronJob {
   recipient: string;
   databases: Types.ObjectId[];
   enabled: boolean;
+  compression: EnumAvailableCompression;
   //If there are references to IDs from other documents, use `Types.ObjectId`
 }
 
@@ -51,6 +53,11 @@ const CronJobSchema = new Schema<CronJob, CronJob>(
     enabled: {
       type: Boolean,
       default: true,
+    },
+    compression: {
+      type: String,
+      enum: Object.values(EnumAvailableCompression),
+      default: EnumAvailableCompression.none,
     },
   },
   {

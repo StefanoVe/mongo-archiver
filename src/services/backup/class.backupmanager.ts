@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import * as mongoose from 'mongoose';
+import pako from 'pako';
 import { BackupDocument, BackupModel } from '../../models/backup.js';
 import { CronJob } from '../../models/cron-job.js';
 import { Database } from '../../models/database.js';
@@ -8,6 +9,11 @@ import { sendEmail } from '../send-email.js';
 import { asyncForEach, colorfulLog } from '../service.utils.js';
 
 type IData = { [key: string]: Record<string, unknown>[] };
+
+export enum EnumAvailableCompression {
+  GZIP = 'gzip',
+  none = '',
+}
 
 export class BackupManager {
   private _connection?: typeof mongoose;
@@ -18,13 +24,21 @@ export class BackupManager {
     return this._data;
   }
 
-  constructor(private _cronJob: CronJob) {}
+  constructor(
+    private _cronJob: CronJob,
+    private compression: EnumAvailableCompression
+  ) {}
 
-  static async init(cronJob: CronJob) {
-    return new BackupManager(cronJob);
+  static async init(
+    cronJob: CronJob,
+    compression: EnumAvailableCompression = EnumAvailableCompression.none
+  ) {
+    return new BackupManager(cronJob, compression);
   }
 
   public async startJob() {
+    colorfulLog(`Starting backup for ${this._cronJob.alias}`, 'start');
+
     await this._createBackupLog();
 
     await asyncForEach(
@@ -42,7 +56,7 @@ export class BackupManager {
   }
 
   public async backup(db: Database) {
-    mongoose.disconnect();
+    await mongoose.disconnect();
 
     //connect to the target db
     await this._connect(db.uri);
@@ -51,8 +65,10 @@ export class BackupManager {
     const _collections = await this._connection?.connection.db.collections();
 
     await asyncForEach(_collections || [], async (collection) => {
+      colorfulLog(`Backing up ${collection.collectionName}`, 'none');
       //for each collection, backup it
       await this._backupCollection(collection);
+      colorfulLog(`Backed up ${collection.collectionName}`, 'none');
     });
 
     //disconnect from the db
@@ -117,10 +133,30 @@ export class BackupManager {
     this._backupLog?.set({
       success: true,
       dateEnd: new Date(),
+      compression: this.compression,
+    });
+
+    let compressedData;
+
+    //depending on the value of "this.compression", compress the data in different ways
+    switch (this.compression) {
+      case EnumAvailableCompression.GZIP:
+        compressedData = this._gzipCompression();
+        break;
+      case EnumAvailableCompression.none:
+        compressedData = JSON.stringify(this._data);
+        break;
+      default:
+        colorfulLog(`Compression ${this.compression} not found`, 'error');
+        break;
+    }
+
+    //update the log with the compressed data
+    this._backupLog?.set({
+      data: compressedData,
     });
 
     await this._backupLog?.save();
-
     colorfulLog(`Backup log updated`, 'info');
   }
 
@@ -129,11 +165,8 @@ export class BackupManager {
   ) {
     const _collection = collection.find({});
 
-    const _array = await _collection.toArray();
-
-    _array.forEach((doc) => {
-      this._data[_collection.namespace.collection || 'unknown'] = _array;
-    });
+    this._data[_collection.namespace.collection || 'unknown'] =
+      await _collection.toArray();
   }
 
   private async _connect(uri: string) {
@@ -144,5 +177,16 @@ export class BackupManager {
 
   private async _disconnect() {
     await this._connection?.disconnect();
+
+    colorfulLog(
+      `Disconnected from ${this._connection?.connection.name}`,
+      'end'
+    );
+  }
+
+  private _gzipCompression() {
+    console.log(`compressing data with pako gzip`);
+    //compress the data with pako
+    return pako.gzip(JSON.stringify(this._data));
   }
 }

@@ -1,7 +1,10 @@
 import { HydratedDocument, Model, model, Schema, Types } from 'mongoose';
 
 export const DATABASE_VALIDATION_MESSAGES = {
-  _id: "L'id del sollecito deve essere un valido id mongoDB",
+  _id: 'Invalid ID',
+  alias: 'Invalid alias',
+  uri: 'Invalid URI',
+  enabled: 'enabled must be true or false',
 };
 
 //1. Create a cache interface to represent the document in MongoDB
@@ -34,6 +37,11 @@ const DatabaseSchema = new Schema<Database, Database>(
     enabled: {
       type: Boolean,
       default: true,
+    },
+    alias: {
+      type: String,
+      required: true,
+      unique: true,
     },
   },
   {

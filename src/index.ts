@@ -9,7 +9,7 @@ runSchedule();
 
 const { PORT } = declareEnvs(['PORT']);
 
-colorfulLog(`Starting web server`, 'info');
+colorfulLog(`STARTING SERVER`, 'start');
 
 const server = app.listen(PORT || 3000, () => {
   colorfulLog(`Listening on PORT ${PORT}`, 'success');

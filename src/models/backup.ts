@@ -6,6 +6,7 @@ import {
   Schema,
   Types,
 } from 'mongoose';
+import { EnumAvailableCompression } from '../services/backup/class.backupmanager.js';
 
 export const BACKUPS_VALIDATION_MESSAGES = {
   _id: "L'id del sollecito deve essere un valido id mongoDB",
@@ -28,6 +29,8 @@ export interface Backup {
   databases: Types.ObjectId[];
   success: boolean;
   dateEnd: Date;
+  data: Uint8Array | string;
+  compression: EnumAvailableCompression;
   //If there are references to IDs from other documents, use `Types.ObjectId`
 }
 
@@ -64,6 +67,14 @@ const BackupSchema = new Schema<Backup, Backup>(
     },
     dateEnd: {
       type: Date,
+      default: null,
+    },
+    data: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    compression: {
+      type: String,
       default: null,
     },
   },

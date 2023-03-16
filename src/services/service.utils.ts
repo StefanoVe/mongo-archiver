@@ -32,7 +32,7 @@ export const asyncForEach = async <T>(
  */
 export const colorfulLog = (
   msg: string,
-  type: 'success' | 'info' | 'error' | 'start' | 'warning' | 'end'
+  type: 'success' | 'info' | 'error' | 'start' | 'warning' | 'end' | 'none'
 ) => {
   let color = 'white';
   // const  bgc = "White";
@@ -55,6 +55,10 @@ export const colorfulLog = (
     case 'end':
       color = '\u001b[1;35m';
       break;
+    case 'none':
+      color = '';
+    default:
+      color = '\u001b[1;37m';
   }
 
   console.log(color + msg + '\u001b[0m');
