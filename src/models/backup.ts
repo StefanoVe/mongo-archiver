@@ -25,7 +25,6 @@ export interface Backup {
   updatedAt: Date;
 
   cronJob: Types.ObjectId;
-  recipient: string;
   databases: Types.ObjectId[];
   success: boolean;
   dateEnd: Date;
@@ -48,10 +47,6 @@ const BackupSchema = new Schema<Backup, Backup>(
     cronJob: {
       type: Schema.Types.ObjectId,
       ref: 'cronJob',
-      required: true,
-    },
-    recipient: {
-      type: String,
       required: true,
     },
     databases: [

@@ -14,7 +14,6 @@ export interface CronJob {
   createdAt: Date;
   updatedAt: Date;
   cronJob: string;
-  recipient: string;
   databases: Types.ObjectId[];
   enabled: boolean;
   compression: EnumAvailableCompression;
@@ -33,10 +32,6 @@ interface CronJobModel extends Model<CronJob> {
 const CronJobSchema = new Schema<CronJob, CronJob>(
   {
     cronJob: {
-      type: String,
-      required: true,
-    },
-    recipient: {
       type: String,
       required: true,
     },
