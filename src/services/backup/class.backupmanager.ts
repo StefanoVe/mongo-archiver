@@ -17,7 +17,6 @@ export enum EnumAvailableCompression {
 export class BackupManager {
   private _connection?: typeof mongoose;
   private _data: IData = {};
-  private _backupLog?: BackupDocument;
 
   public get data(): IData {
     return this._data;
@@ -26,7 +25,7 @@ export class BackupManager {
   constructor(
     private _cronJob: CronJob | undefined,
     private compression: EnumAvailableCompression,
-    private _backup: BackupDocument | undefined
+    private _backupLog: BackupDocument | undefined
   ) {}
 
   static async init(o: { cronJob?: CronJob; backup: BackupDocument }) {
@@ -60,12 +59,12 @@ export class BackupManager {
         }
 
         //for each db in the cronJob, backup it
-        await this.backup(db);
+        await this._backupDb(db);
       }
     );
   }
 
-  public async backup(db: Database) {
+  private async _backupDb(db: Database) {
     await mongoose.disconnect();
 
     //connect to the target db
@@ -91,7 +90,7 @@ export class BackupManager {
     await this._updateBackupLog();
   }
 
-  public async createPackage() {
+  public async createPackages() {
     //create a JSON Blob for each collection in "this._data"
 
     return Object.keys(this._data).map((key) => {
@@ -103,6 +102,7 @@ export class BackupManager {
         throw new Error('Backup log not found');
       }
 
+      //return an object with a filename and the content of the JSON Blob
       return {
         filename: `${key}_${format(
           this._backupLog?.dateEnd,
