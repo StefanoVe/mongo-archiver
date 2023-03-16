@@ -26,9 +26,11 @@ router.get(
       return res.status(404).send('backup not found');
     }
 
-    const fileName = `${
-      (backup.cronJob as unknown as CronJob).alias
-    }_${backup.createdAt.valueOf()}`;
+    const fileName = _clean(
+      `${
+        (backup.cronJob as unknown as CronJob).alias
+      }_${backup.createdAt.valueOf()}`
+    );
 
     if (backup.compression === EnumAvailableCompression.GZIP) {
       //convert the Unit8Array to JSON and overwrite backup.data
@@ -60,3 +62,8 @@ router.get(
 );
 
 export { router as downloadBackupRouter };
+
+//a function to replace every windows not allowed character with an underscore
+const _clean = (str: string) => {
+  return str.replace(/[<>:"/\\|?*]/g, '_').replaceAll(' ', '_');
+};
