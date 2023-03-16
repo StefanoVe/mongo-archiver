@@ -48,6 +48,7 @@ export class BackupManager {
 
     colorfulLog(`Starting backup for ${this._cronJob.alias}`, 'start');
 
+    //create a backup log
     await this._createBackupLog();
 
     await asyncForEach(
@@ -62,32 +63,6 @@ export class BackupManager {
         await this._backupDb(db);
       }
     );
-  }
-
-  private async _backupDb(db: Database) {
-    await mongoose.disconnect();
-
-    //connect to the target db
-    await this._connect(db.uri);
-
-    //get all the collections
-    const _collections = await this._connection?.connection.db.collections();
-
-    await asyncForEach(_collections || [], async (collection) => {
-      colorfulLog(`Backing up ${collection.collectionName}`, 'none');
-      //for each collection, backup it
-      await this._backupCollection(collection);
-      colorfulLog(`Backed up ${collection.collectionName}`, 'none');
-    });
-
-    //disconnect from the db
-    await this._disconnect();
-
-    //reconnect to the main db
-    await connectToMainDB();
-
-    //update the backup log, setting "success" to true and "dateEnd" to the current date
-    await this._updateBackupLog();
   }
 
   public async createPackages() {
@@ -113,12 +88,43 @@ export class BackupManager {
     });
   }
 
+  private async _backupDb(db: Database) {
+    //disconnect from the main DB
+    await mongoose.disconnect();
+
+    //connect to the target db
+    await this._connect(db.uri);
+
+    //get all the collections
+    const _collections = await this._connection?.connection.db.collections();
+
+    await asyncForEach(_collections || [], async (collection) => {
+      colorfulLog(`Backing up ${collection.collectionName}`, 'none');
+      //for each collection, backup it
+      await this._backupCollection(collection);
+      colorfulLog(`Backed up ${collection.collectionName}`, 'none');
+    });
+
+    //disconnect from the db
+    await this._disconnect();
+
+    //reconnect to the main db
+    await connectToMainDB();
+
+    //update the backup log, setting "success" to true and "dateEnd" to the current date
+    await this._updateBackupLog();
+  }
+
   private async _createBackupLog() {
+    if (!this._cronJob) {
+      throw new Error('CronJob is not defined');
+    }
+
     //create a backup log
     this._backupLog = BackupModel.build({
       cronJob: this._cronJob._id,
-      recipient: this._cronJob.recipient,
       databases: this._cronJob.databases,
+      compression: this.compression,
     });
 
     await this._backupLog.save();
@@ -148,11 +154,12 @@ export class BackupManager {
     }
 
     //update the log with the compressed data
-    this._backupLog?.set({
-      data: compressedData,
-    });
+    await this._backupLog
+      ?.set({
+        data: compressedData,
+      })
+      .save();
 
-    await this._backupLog?.save();
     colorfulLog(`Backup log updated`, 'info');
   }
 

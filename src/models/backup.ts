@@ -12,6 +12,13 @@ export const BACKUPS_VALIDATION_MESSAGES = {
   _id: "L'id del sollecito deve essere un valido id mongoDB",
 };
 
+export enum EnumBackupStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  SUCCESS = 'success',
+  ERROR = 'error',
+}
+
 export type BackupDocument = Document<unknown, {}, Backup> &
   Backup &
   Required<{
@@ -26,10 +33,10 @@ export interface Backup {
 
   cronJob: Types.ObjectId;
   databases: Types.ObjectId[];
-  success: boolean;
   dateEnd: Date;
   data: Uint8Array | string;
   compression: EnumAvailableCompression;
+  backupStatus: EnumBackupStatus;
   //If there are references to IDs from other documents, use `Types.ObjectId`
 }
 
@@ -56,9 +63,10 @@ const BackupSchema = new Schema<Backup, Backup>(
         required: true,
       },
     ],
-    success: {
-      type: Boolean,
-      default: false,
+    backupStatus: {
+      type: String,
+      enum: Object.values(EnumBackupStatus),
+      default: EnumBackupStatus.PENDING,
     },
     dateEnd: {
       type: Date,
