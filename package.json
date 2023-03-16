@@ -3,7 +3,8 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "nodemon --exec bun run src/index.ts"
+    "start": "nodemon --exec bun run src/index.ts",
+    "deploy": "cp ./Dockerfile ./dist/client && cp ./captain-definition ./dist/client && tar --strip-components=3 -cvf ./deploy.tar --exclude='*.map' ./dist/client/* && caprover deploy -t ./deploy.tar -n golden -a mongodb-backups && rm ./deploy.tar"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
