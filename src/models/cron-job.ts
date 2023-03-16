@@ -1,5 +1,6 @@
 import { HydratedDocument, Model, model, Schema, Types } from 'mongoose';
 import { EnumAvailableCompression } from '../services/backup/class.backupmanager.js';
+import { reloadSchedule$ } from '../services/cron.schedule.js';
 
 export const CRON_JOB_VALIDATION_MESSAGES = {
   _id: "L'id del sollecito deve essere un valido id mongoDB",
@@ -68,6 +69,7 @@ const CronJobSchema = new Schema<CronJob, CronJob>(
 
 //4. Add here, if any, the hooks to execute before or after a CRUD operation (create, read, update, delete)
 CronJobSchema.pre('save', async function (done) {
+  reloadSchedule$.next();
   done();
 });
 
