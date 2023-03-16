@@ -53,7 +53,7 @@ const BackupSchema = new Schema<Backup, Backup>(
   {
     cronJob: {
       type: Schema.Types.ObjectId,
-      ref: 'cronJob',
+      ref: 'cronjob',
       required: true,
     },
     databases: [

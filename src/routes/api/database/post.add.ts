@@ -10,7 +10,7 @@ import { validateRequest } from '../../../services/validation/service.validate-r
 const router = express.Router();
 
 router.post(
-  '/add',
+  '/',
   body('alias').isString().withMessage(DATABASE_VALIDATION_MESSAGES.alias),
   body('uri').isString().withMessage(DATABASE_VALIDATION_MESSAGES.uri),
   body('enabled').isBoolean().withMessage(DATABASE_VALIDATION_MESSAGES.enabled),
@@ -27,7 +27,7 @@ router.post(
 
     if (existingDb) {
       res.status(400).send({
-        error: 'Database with alias or uri already exists',
+        error: 'Database with the same alias or uri already exists',
       });
       return;
     }

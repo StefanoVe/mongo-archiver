@@ -15,7 +15,7 @@ export enum EnumAvailableCompression {
 }
 
 export class BackupManager {
-  private _connection?: typeof mongoose;
+  private _connection?: mongoose.Connection;
   private _data: IData = {};
 
   public get data(): IData {
@@ -28,13 +28,13 @@ export class BackupManager {
     private _backupLog: BackupDocument | undefined
   ) {}
 
-  static async init(o: { cronJob?: CronJob; backup: BackupDocument }) {
+  static async init(o: { cronJob?: CronJob; backup?: BackupDocument }) {
     if (!o.cronJob && !o.backup) {
       throw new Error('CronJob or Backup is not defined');
     }
 
     const compression =
-      o.backup.compression ||
+      o.backup?.compression ||
       o.cronJob?.compression ||
       EnumAvailableCompression.none;
 
@@ -46,7 +46,7 @@ export class BackupManager {
       throw new Error('CronJob is not defined');
     }
 
-    colorfulLog(`Starting backup for ${this._cronJob.alias}`, 'start');
+    colorfulLog(`Starting backup for "${this._cronJob.alias}"`, 'start');
 
     //create a backup log
     await this._createBackupLog();
@@ -90,13 +90,17 @@ export class BackupManager {
 
   private async _backupDb(db: Database) {
     //disconnect from the main DB
-    await mongoose.disconnect();
+    // await mongoose.disconnect();
 
     //connect to the target db
     await this._connect(db.uri);
 
     //get all the collections
-    const _collections = await this._connection?.connection.db.collections();
+    const _collections = await this._connection?.db
+      .collections()
+      .catch((e) => colorfulLog(e, 'error'));
+
+    console.log(_collections);
 
     await asyncForEach(_collections || [], async (collection) => {
       colorfulLog(`Backing up ${collection.collectionName}`, 'none');
@@ -173,18 +177,17 @@ export class BackupManager {
   }
 
   private async _connect(uri: string) {
-    this._connection = await mongoose.connect(uri);
+    this._connection = mongoose.createConnection(uri);
+
+    console.log(this._connection);
 
     colorfulLog(`Connected to ${uri}`, 'info');
   }
 
   private async _disconnect() {
-    await this._connection?.disconnect();
+    await this._connection?.close();
 
-    colorfulLog(
-      `Disconnected from ${this._connection?.connection.name}`,
-      'end'
-    );
+    colorfulLog(`Disconnected from ${this._connection?.name}`, 'end');
   }
 
   private _gzipCompression() {

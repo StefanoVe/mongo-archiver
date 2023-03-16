@@ -3,7 +3,12 @@ import { EnumAvailableCompression } from '../services/backup/class.backupmanager
 import { reloadSchedule$ } from '../services/cron.schedule.js';
 
 export const CRON_JOB_VALIDATION_MESSAGES = {
-  _id: "L'id del sollecito deve essere un valido id mongoDB",
+  _id: 'Invalid ID',
+  alias: 'Invalid alias',
+  expression: 'Invalid cron expression',
+  enabled: 'enabled must be true or false',
+  compression: 'Invalid compression',
+  databases: 'Invalid databases',
 };
 
 //1. Create a cache interface to represent the document in MongoDB
@@ -13,7 +18,7 @@ export interface CronJob {
   alias: string;
   createdAt: Date;
   updatedAt: Date;
-  cronJob: string;
+  expression: string;
   databases: Types.ObjectId[];
   enabled: boolean;
   compression: EnumAvailableCompression;
@@ -31,7 +36,7 @@ interface CronJobModel extends Model<CronJob> {
 //additions in the Schema!
 const CronJobSchema = new Schema<CronJob, CronJob>(
   {
-    cronJob: {
+    expression: {
       type: String,
       required: true,
     },
