@@ -1,10 +1,13 @@
 import { format } from 'date-fns';
 import * as mongoose from 'mongoose';
 import pako from 'pako';
-import { BackupDocument, BackupModel } from '../../models/backup.js';
+import {
+  BackupDocument,
+  BackupModel,
+  EnumBackupStatus,
+} from '../../models/backup.js';
 import { CronJob } from '../../models/cron-job.js';
 import { Database } from '../../models/database.js';
-import { connectToMainDB } from '../connect.js';
 import { asyncForEach, colorfulLog } from '../service.utils.js';
 
 type IData = { [key: string]: Record<string, unknown>[] };
@@ -96,14 +99,9 @@ export class BackupManager {
     await this._connect(db.uri);
 
     //get all the collections
-    const _collections = await this._connection?.db
-      .collections()
-      .catch((e) => colorfulLog(e, 'error'));
-
-    console.log(_collections);
+    const _collections = await this._connection?.db?.collections();
 
     await asyncForEach(_collections || [], async (collection) => {
-      colorfulLog(`Backing up ${collection.collectionName}`, 'none');
       //for each collection, backup it
       await this._backupCollection(collection);
       colorfulLog(`Backed up ${collection.collectionName}`, 'none');
@@ -111,9 +109,6 @@ export class BackupManager {
 
     //disconnect from the db
     await this._disconnect();
-
-    //reconnect to the main db
-    await connectToMainDB();
 
     //update the backup log, setting "success" to true and "dateEnd" to the current date
     await this._updateBackupLog();
@@ -137,7 +132,7 @@ export class BackupManager {
   private async _updateBackupLog() {
     //update the backup log
     this._backupLog?.set({
-      success: true,
+      backupStatus: EnumBackupStatus.SUCCESS,
       dateEnd: new Date(),
       compression: this.compression,
     });
@@ -179,9 +174,7 @@ export class BackupManager {
   private async _connect(uri: string) {
     this._connection = mongoose.createConnection(uri);
 
-    console.log(this._connection);
-
-    colorfulLog(`Connected to ${uri}`, 'info');
+    await this._connection?.getClient().connect();
   }
 
   private async _disconnect() {

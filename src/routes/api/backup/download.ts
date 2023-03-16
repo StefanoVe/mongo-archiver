@@ -3,6 +3,7 @@ import express from 'express';
 import { param } from 'express-validator';
 import JSZip from 'jszip';
 import { Types } from 'mongoose';
+import Pako from 'pako';
 import { BackupModel } from '../../../models/backup.js';
 import { CronJob } from '../../../models/cron-job.js';
 import { EnumAvailableCompression } from '../../../services/backup/class.backupmanager.js';
@@ -27,20 +28,18 @@ router.get(
 
     const fileName = `${
       (backup.cronJob as unknown as CronJob).alias
-    }_${backup.createdAt.valueOf()}.zip`;
-
-    //if the backup is compressed, send it as a gzip file
+    }_${backup.createdAt.valueOf()}`;
 
     if (backup.compression === EnumAvailableCompression.GZIP) {
-      res.send(backup.data);
-      return;
+      //convert the Unit8Array to JSON and overwrite backup.data
+
+      backup.data = Pako.ungzip((backup.data as unknown as any).buffer, {
+        to: 'string',
+      });
     }
 
     //if the backup is not compressed, create a json file for each key and send it as a gzip file
     const data = JSON.parse(backup.data as string);
-
-    const files: { [key: string]: string }[] = [];
-
     const _zip = new JSZip();
 
     Object.keys(data).forEach((key) => {
@@ -53,7 +52,7 @@ router.get(
     const zipBuffer = await _zip.generateAsync({ type: 'nodebuffer' });
     res.set({
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename=${fileName}`,
+      'Content-Disposition': `attachment; filename=${fileName}.zip`,
     });
 
     res.send(zipBuffer);

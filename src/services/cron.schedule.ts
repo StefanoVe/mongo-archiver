@@ -58,6 +58,7 @@ const _buildSchedule = async () => {
 
       //backup the chosen collections
       await _backupManager.startJob().catch((error) => {
+        console.log(error);
         colorfulLog('job failed!', 'error');
       });
 
