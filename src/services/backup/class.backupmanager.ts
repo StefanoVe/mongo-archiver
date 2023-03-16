@@ -5,7 +5,6 @@ import { BackupDocument, BackupModel } from '../../models/backup.js';
 import { CronJob } from '../../models/cron-job.js';
 import { Database } from '../../models/database.js';
 import { connectToMainDB } from '../connect.js';
-import { sendEmail } from '../send-email.js';
 import { asyncForEach, colorfulLog } from '../service.utils.js';
 
 type IData = { [key: string]: Record<string, unknown>[] };
@@ -25,18 +24,29 @@ export class BackupManager {
   }
 
   constructor(
-    private _cronJob: CronJob,
-    private compression: EnumAvailableCompression
+    private _cronJob: CronJob | undefined,
+    private compression: EnumAvailableCompression,
+    private _backup: BackupDocument | undefined
   ) {}
 
-  static async init(
-    cronJob: CronJob,
-    compression: EnumAvailableCompression = EnumAvailableCompression.none
-  ) {
-    return new BackupManager(cronJob, compression);
+  static async init(o: { cronJob?: CronJob; backup: BackupDocument }) {
+    if (!o.cronJob && !o.backup) {
+      throw new Error('CronJob or Backup is not defined');
+    }
+
+    const compression =
+      o.backup.compression ||
+      o.cronJob?.compression ||
+      EnumAvailableCompression.none;
+
+    return new BackupManager(o.cronJob, compression, o.backup);
   }
 
   public async startJob() {
+    if (!this._cronJob) {
+      throw new Error('CronJob is not defined');
+    }
+
     colorfulLog(`Starting backup for ${this._cronJob.alias}`, 'start');
 
     await this._createBackupLog();
@@ -79,20 +89,6 @@ export class BackupManager {
 
     //update the backup log, setting "success" to true and "dateEnd" to the current date
     await this._updateBackupLog();
-  }
-
-  public async sendToRecipient() {
-    //send the backup to the recipient
-
-    const buffers = await this.createPackage();
-
-    //send the buffers to the recipient
-    await sendEmail(
-      [this._cronJob.recipient],
-      `Mongo Archiver | ${this._cronJob.alias}`,
-      '',
-      buffers
-    );
   }
 
   public async createPackage() {
