@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import { NotAuthorizedError } from '../../errors/errors/not-authorized-error.js';
 import { declareEnvs } from '../service.utils.js';
 
 const { API_KEY } = declareEnvs(['API_KEY']);
@@ -9,8 +8,10 @@ export const requireApiKey = (
   res: Response,
   next: NextFunction
 ) => {
-  if (req.headers.apikey !== API_KEY) {
-    throw new NotAuthorizedError();
+  if (req.headers['x-api-key'] !== API_KEY) {
+    res.status(401).send({
+      error: 'Not authorized',
+    });
   }
 
   next();

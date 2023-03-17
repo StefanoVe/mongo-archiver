@@ -3,7 +3,6 @@ import express from 'express';
 import { body } from 'express-validator';
 import { DATABASE_VALIDATION_MESSAGES } from '../../../models/database.js';
 import { testConnection } from '../../../services/connect.js';
-import { requireApiKey } from '../../../services/validation/service.require-api-key.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
 
 const _validateMongoUri = (uri: string) => {
@@ -29,7 +28,6 @@ router.post(
   body('uri')
     .custom(_validateMongoUri)
     .withMessage(DATABASE_VALIDATION_MESSAGES.uri),
-  requireApiKey,
   validateRequest,
   async (req, res) => {
     const { uri } = req.body;
