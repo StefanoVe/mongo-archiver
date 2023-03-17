@@ -45,6 +45,7 @@ router.post(
       res.status(400).send({
         error: 'Cron with the same alias or cron expression already exists',
       });
+      return;
     }
 
     const cronJob = CronJobModel.build({

@@ -6,7 +6,10 @@ import { Types } from 'mongoose';
 import Pako from 'pako';
 import { BackupModel } from '../../../models/backup.js';
 import { CronJob } from '../../../models/cron-job.js';
-import { EnumAvailableCompression } from '../../../services/backup/class.backupmanager.js';
+import {
+  EnumAvailableCompression,
+  IData,
+} from '../../../services/backup/class.backupmanager.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
 
 const router = express.Router();
@@ -41,15 +44,22 @@ router.get(
     }
 
     //if the backup is not compressed, create a json file for each key and send it as a gzip file
-    const data = JSON.parse(backup.data as string);
+    const data: IData = JSON.parse(backup.data as string);
     const _zip = new JSZip();
 
-    Object.keys(data).forEach((key) => {
-      //for each key, create a json file
-      const _data = JSON.stringify(data[key]);
+    Object.keys(data).forEach((db) => {
+      //for each db, create a folder
 
-      //add the file to the zip
-      _zip.file(`${key}.json`, _data);
+      const _collections = Object.keys(data[db]);
+      const folder = _zip.folder(db);
+
+      _collections.forEach((collection) => {
+        //for each collection in the db, create a file
+        const _data = JSON.stringify(data[db][collection]);
+
+        //add the file to the zip
+        folder?.file(`${collection}.json`, _data);
+      });
     });
 
     const zipBuffer = await _zip.generateAsync({ type: 'nodebuffer' });

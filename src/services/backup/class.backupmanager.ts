@@ -10,7 +10,9 @@ import { CronJob } from '../../models/cron-job.js';
 import { Database } from '../../models/database.js';
 import { asyncForEach, colorfulLog } from '../service.utils.js';
 
-type IData = { [key: string]: Record<string, unknown>[] };
+export type IData = {
+  [dbName: string]: { [collectionName: string]: Record<string, unknown>[] };
+};
 
 export enum EnumAvailableCompression {
   GZIP = 'gzip',
@@ -92,9 +94,6 @@ export class BackupManager {
   }
 
   private async _backupDb(db: Database) {
-    //disconnect from the main DB
-    // await mongoose.disconnect();
-
     //connect to the target db
     await this._connect(db.uri);
 
@@ -167,14 +166,23 @@ export class BackupManager {
   ) {
     const _collection = collection.find({});
 
-    this._data[_collection.namespace.collection || 'unknown'] =
-      await _collection.toArray();
+    const result = await _collection.toArray();
+
+    const _dbName = this._connection?.name || 'UNKNOWN';
+    const _collectionName = _collection?.namespace?.collection || 'UNKNOWN';
+
+    const _data = { [_collectionName]: result };
+
+    //assigning the exported datat to "db name" > "collection name"
+    this._data[_dbName] = { ...this._data[_dbName], ..._data };
   }
 
   private async _connect(uri: string) {
     this._connection = mongoose.createConnection(uri);
 
     await this._connection?.getClient().connect();
+
+    colorfulLog(`Connected to ${this._connection?.name}`, 'start');
   }
 
   private async _disconnect() {
