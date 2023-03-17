@@ -10,7 +10,7 @@ export class NotAuthorizedError extends CustomError {
   // ma sempre lo stesso!
   constructor() {
     // Passo il messaggio al costruttore della classe padre
-    super('Non sei autorizzato');
+    super('Not authorized');
 
     // Questa riga è necessaria e non va MAI CANCELLATA e serve solo perché stiamo estendendo una classe
     // che a sua volta estende una classe nativa di JS (Error)
