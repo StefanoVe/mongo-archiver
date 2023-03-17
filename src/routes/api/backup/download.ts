@@ -26,7 +26,7 @@ router.get(
     );
 
     if (!backup) {
-      return res.status(404).send('backup not found');
+      return res.status(404).send({ error: 'backup not found' });
     }
 
     //create a file name with the alias of the cron job and the date timestamp of the backup

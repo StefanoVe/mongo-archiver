@@ -24,7 +24,7 @@ router.get(
     const databases = await DatabaseModel.findById(_mongoId);
 
     if (!databases) {
-      return res.status(404).send('database not found');
+      return res.status(404).send({ error: 'database not found' });
     }
 
     res.send(databases);

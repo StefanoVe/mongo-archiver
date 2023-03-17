@@ -31,7 +31,28 @@ export class BackupManager {
     private _cronJob: CronJob | undefined,
     private compression: EnumAvailableCompression,
     private _backupLog: BackupDocument | undefined
-  ) {}
+  ) {
+    if (!this._backupLog?.data) {
+      //if there is no data in the backup log or there is no backupLog at all, return
+      return;
+    }
+
+    if (this._backupLog.compression === EnumAvailableCompression.none) {
+      //if the compression is "none", parse the data as a string
+      this._data = JSON.parse(this._backupLog.data as string);
+      return;
+    }
+
+    if (this._backupLog.compression === EnumAvailableCompression.GZIP) {
+      //if the compression is "gzip", uncompress the data and parse it as a string
+      this._data = JSON.parse(
+        pako.ungzip((this._backupLog.data as any).buffer as Uint8Array, {
+          to: 'string',
+        })
+      );
+      return;
+    }
+  }
 
   static async init(o: { cronJob?: CronJob; backup?: BackupDocument }) {
     if (!o.cronJob && !o.backup) {
@@ -68,6 +89,8 @@ export class BackupManager {
         await this._backupDb(db);
       }
     );
+    //update the backup log, setting "success" to true and "dateEnd" to the current date
+    await this._updateBackupLog();
   }
 
   public async createPackages() {
@@ -102,15 +125,12 @@ export class BackupManager {
 
     await asyncForEach(_collections || [], async (collection) => {
       //for each collection, backup it
-      await this._backupCollection(collection);
+      await this._backupCollection(collection, db.alias);
       colorfulLog(`Backed up ${collection.collectionName}`, 'none');
     });
 
     //disconnect from the db
     await this._disconnect();
-
-    //update the backup log, setting "success" to true and "dateEnd" to the current date
-    await this._updateBackupLog();
   }
 
   private async _createBackupLog() {
@@ -162,13 +182,19 @@ export class BackupManager {
   }
 
   private async _backupCollection(
-    collection: mongoose.mongo.Collection<mongoose.mongo.BSON.Document>
+    collection: mongoose.mongo.Collection<mongoose.mongo.BSON.Document>,
+    dbAlias: string
   ) {
     const _collection = collection.find({});
 
+    if (!_collection) {
+      colorfulLog(`Collection ${collection.collectionName} not found`, 'error');
+      return;
+    }
+
     const result = await _collection.toArray();
 
-    const _dbName = this._connection?.name || 'UNKNOWN';
+    const _dbName = `${dbAlias}_${this._connection?.name || 'UNKNOWN'}`;
     const _collectionName = _collection?.namespace?.collection || 'UNKNOWN';
 
     const _data = { [_collectionName]: result };
@@ -180,7 +206,7 @@ export class BackupManager {
   private async _connect(uri: string) {
     this._connection = mongoose.createConnection(uri);
 
-    await this._connection?.getClient().connect();
+    await this._connection?.getClient().connect().catch(console.log);
 
     colorfulLog(`Connected to ${this._connection?.name}`, 'start');
   }

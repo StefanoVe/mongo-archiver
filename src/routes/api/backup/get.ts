@@ -28,7 +28,7 @@ router.get(
     );
 
     if (!backup) {
-      return res.status(404).send('database not found');
+      return res.status(404).send({ error: 'database not found' });
     }
 
     res.send(backup);
