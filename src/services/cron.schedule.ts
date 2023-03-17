@@ -1,11 +1,16 @@
+import { endOfDay, startOfDay, subDays } from 'date-fns';
 import * as cron from 'node-cron';
 import { Subject, tap } from 'rxjs';
 import { genericErrorHandler } from '../errors/services/generic-error-handler.js';
+import { BackupModel } from '../models/backup.js';
 import { CronJobModel } from '../models/cron-job.js';
 import { BackupManager } from './backup/class.backupmanager.js';
 import { asyncForEach, colorfulLog, declareEnvs } from './service.utils.js';
 
-const { RUN_SCHEDULE } = declareEnvs(['RUN_SCHEDULE']);
+const { RUN_SCHEDULE, DELETE_OLDER_THAN } = declareEnvs([
+  'RUN_SCHEDULE',
+  'DELETE_OLDER_THAN',
+]);
 
 const _runSchedule = RUN_SCHEDULE === '1';
 
@@ -29,6 +34,33 @@ reloadSchedule$
     })
   )
   .subscribe();
+
+//every day at 00:00 run the schedule
+cron.schedule(' 0 0 * * *', async () => {
+  //find all backups older than N days and delete them
+
+  const _deleteOlderThan = parseInt(DELETE_OLDER_THAN || '-1');
+
+  if (_deleteOlderThan < 0) {
+    colorfulLog('DELETE_OLDER_THAN is not set', 'warning');
+    return;
+  }
+
+  const NDaysAgo = subDays(new Date(), _deleteOlderThan);
+
+  const backups = await BackupModel.find({
+    createdAt: { $gte: startOfDay(NDaysAgo), $lte: endOfDay(NDaysAgo) },
+  });
+
+  colorfulLog(
+    `Deleting ${backups.length} backups older than ${_deleteOlderThan} days`,
+    'info'
+  );
+
+  backups.forEach(async (backup) => {
+    await backup.deleteOne();
+  });
+});
 
 /**
  * Bootstrap function to run the schedule on server start
