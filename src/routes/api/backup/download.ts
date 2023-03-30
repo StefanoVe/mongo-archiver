@@ -1,6 +1,6 @@
 //boiler plate for an express post request
 import express from 'express';
-import { param } from 'express-validator';
+import { param, query } from 'express-validator';
 import JSZip from 'jszip';
 import { Types } from 'mongoose';
 import Pako from 'pako';
@@ -10,13 +10,19 @@ import {
   EnumAvailableCompression,
   IData,
 } from '../../../services/backup/class.backupmanager.js';
+import { declareEnvs } from '../../../services/service.utils.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
 
 const router = express.Router();
 
+const { API_KEY } = declareEnvs(['API_KEY']);
+
 router.get(
   '/:id',
   param('id').isMongoId().withMessage('id must be a valid mongo id'),
+  query('apiKey')
+    .custom((v) => v === API_KEY)
+    .withMessage('not authorized'),
   validateRequest,
   async (req, res) => {
     const { id } = req.params;

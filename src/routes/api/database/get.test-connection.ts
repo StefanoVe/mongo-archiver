@@ -11,14 +11,14 @@ const _validateMongoUri = (uri: string) => {
     /^mongodb:\/\/[a-zA-Z0-9]+:[a-zA-Z0-9]+@([a-zA-Z0-9]+\.){1,}[a-zA-Z0-9]+(:[0-9]+)?\/[a-zA-Z0-9]+$/;
 
   const ipAddress =
-    /^mongodb:\/\/[a-zA-Z0-9]+:[a-zA-Z0-9]+@([0-9]+\.){1,}[0-9]+(:[0-9]+)?\/[a-zA-Z0-9]+$/;
+    /^([01]?\d?\d|2[0-4]\d|25[0-5])(\.([01]?\d?\d|2[0-4]\d|25[0-5])){3}$/;
 
-  //if it's localhost or an ip address, it's valid
-  if (uri.includes('localhost')) {
-    return true;
-  }
+  //localhost with port
+  const localhost = /^mongodb:\/\/localhost:\d+\/\w+/;
 
-  return uri.match(url) || uri.match(ipAddress) ? true : false;
+  return uri.match(url) || uri.match(ipAddress) || uri.match(localhost)
+    ? true
+    : false;
 };
 
 const router = express.Router();

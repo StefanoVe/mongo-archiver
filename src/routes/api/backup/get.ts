@@ -15,11 +15,18 @@ router.get(
     const { id } = req.params;
 
     if (!id?.length) {
-      const database = await BackupModel.find({})
-        .select('-data')
+      const backups = await BackupModel.find({})
+        .sort({ createdAt: -1 })
+        .lean()
         .populate('cronJob databases');
 
-      return res.send(database);
+      const mapped = backups.map((b) => ({
+        ...b,
+        size: _size(b.data?.toString()) || 'N/A',
+        data: undefined,
+      }));
+
+      return res.send(mapped);
     }
 
     const _mongoId = new Types.ObjectId(id);
@@ -36,3 +43,8 @@ router.get(
 );
 
 export { router as getBackupRouter };
+
+const _size = (str: string) => {
+  const sizeInBytes = new TextEncoder().encode(str).byteLength;
+  return (sizeInBytes / (1024 * 1024)).toFixed(2);
+};
