@@ -1,6 +1,6 @@
 //boiler plate for an express post request
 import express from 'express';
-import { param } from 'express-validator';
+import { param, query } from 'express-validator';
 import { Types } from 'mongoose';
 import { BackupModel } from '../../../models/backup.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
@@ -10,25 +10,44 @@ const router = express.Router();
 router.get(
   '/:id?',
   param('id').optional().isMongoId().withMessage('id must be a valid mongo id'),
+  query('limit').optional().isInt().withMessage('limit must be an integer'),
   validateRequest,
   async (req, res) => {
     const { id } = req.params;
+    const { limit } = req.query;
 
     if (!id?.length) {
-      const database = await BackupModel.find({}).select('-data');
+      const backups = await BackupModel.find({})
+        .sort({ createdAt: -1 })
+        .lean()
+        .limit(Number(limit || 0))
+        .populate('cronJob databases');
 
-      return res.send(database);
+      const mapped = backups.map((b) => ({
+        ...b,
+        size: _size(b.data?.toString()) || 'N/A',
+        data: undefined,
+      }));
+
+      return res.send(mapped);
     }
 
     const _mongoId = new Types.ObjectId(id);
-    const databases = await BackupModel.findById(_mongoId);
+    const backup = await BackupModel.findById(_mongoId).populate(
+      'cronJob databases'
+    );
 
-    if (!databases) {
-      return res.status(404).send('database not found');
+    if (!backup) {
+      return res.status(404).send({ error: 'database not found' });
     }
 
-    res.send(databases);
+    res.send(backup);
   }
 );
 
 export { router as getBackupRouter };
+
+const _size = (str: string) => {
+  const sizeInBytes = new TextEncoder().encode(str).byteLength;
+  return (sizeInBytes / (1024 * 1024)).toFixed(2);
+};

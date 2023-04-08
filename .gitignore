@@ -173,4 +173,5 @@ deploy.tar
 
 /dist
 
+# macos files 
 .DS_Store

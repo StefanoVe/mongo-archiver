@@ -1,13 +1,18 @@
 import { format } from 'date-fns';
 import * as mongoose from 'mongoose';
 import pako from 'pako';
-import { BackupDocument, BackupModel } from '../../models/backup.js';
+import {
+  BackupDocument,
+  BackupModel,
+  EnumBackupStatus,
+} from '../../models/backup.js';
 import { CronJob } from '../../models/cron-job.js';
 import { Database } from '../../models/database.js';
-import { connectToMainDB } from '../connect.js';
 import { asyncForEach, colorfulLog } from '../service.utils.js';
 
-type IData = { [key: string]: Record<string, unknown>[] };
+export type IData = {
+  [dbName: string]: { [collectionName: string]: Record<string, unknown>[] };
+};
 
 export enum EnumAvailableCompression {
   GZIP = 'gzip',
@@ -15,7 +20,7 @@ export enum EnumAvailableCompression {
 }
 
 export class BackupManager {
-  private _connection?: typeof mongoose;
+  private _connection?: mongoose.Connection;
   private _data: IData = {};
 
   public get data(): IData {
@@ -26,15 +31,36 @@ export class BackupManager {
     private _cronJob: CronJob | undefined,
     private compression: EnumAvailableCompression,
     private _backupLog: BackupDocument | undefined
-  ) {}
+  ) {
+    if (!this._backupLog?.data) {
+      //if there is no data in the backup log or there is no backupLog at all, return
+      return;
+    }
 
-  static async init(o: { cronJob?: CronJob; backup: BackupDocument }) {
+    if (this._backupLog.compression === EnumAvailableCompression.none) {
+      //if the compression is "none", parse the data as a string
+      this._data = JSON.parse(this._backupLog.data as string);
+      return;
+    }
+
+    if (this._backupLog.compression === EnumAvailableCompression.GZIP) {
+      //if the compression is "gzip", uncompress the data and parse it as a string
+      this._data = JSON.parse(
+        pako.ungzip((this._backupLog.data as any).buffer as Uint8Array, {
+          to: 'string',
+        })
+      );
+      return;
+    }
+  }
+
+  static async init(o: { cronJob?: CronJob; backup?: BackupDocument }) {
     if (!o.cronJob && !o.backup) {
       throw new Error('CronJob or Backup is not defined');
     }
 
     const compression =
-      o.backup.compression ||
+      o.backup?.compression ||
       o.cronJob?.compression ||
       EnumAvailableCompression.none;
 
@@ -46,7 +72,7 @@ export class BackupManager {
       throw new Error('CronJob is not defined');
     }
 
-    colorfulLog(`Starting backup for ${this._cronJob.alias}`, 'start');
+    colorfulLog(`Starting backup for "${this._cronJob.alias}"`, 'start');
 
     //create a backup log
     await this._createBackupLog();
@@ -63,6 +89,8 @@ export class BackupManager {
         await this._backupDb(db);
       }
     );
+    //update the backup log, setting "success" to true and "dateEnd" to the current date
+    await this._updateBackupLog();
   }
 
   public async createPackages() {
@@ -89,30 +117,20 @@ export class BackupManager {
   }
 
   private async _backupDb(db: Database) {
-    //disconnect from the main DB
-    await mongoose.disconnect();
-
     //connect to the target db
     await this._connect(db.uri);
 
     //get all the collections
-    const _collections = await this._connection?.connection.db.collections();
+    const _collections = await this._connection?.db?.collections();
 
     await asyncForEach(_collections || [], async (collection) => {
-      colorfulLog(`Backing up ${collection.collectionName}`, 'none');
       //for each collection, backup it
-      await this._backupCollection(collection);
+      await this._backupCollection(collection, db.alias);
       colorfulLog(`Backed up ${collection.collectionName}`, 'none');
     });
 
     //disconnect from the db
     await this._disconnect();
-
-    //reconnect to the main db
-    await connectToMainDB();
-
-    //update the backup log, setting "success" to true and "dateEnd" to the current date
-    await this._updateBackupLog();
   }
 
   private async _createBackupLog() {
@@ -133,7 +151,7 @@ export class BackupManager {
   private async _updateBackupLog() {
     //update the backup log
     this._backupLog?.set({
-      success: true,
+      backupStatus: EnumBackupStatus.SUCCESS,
       dateEnd: new Date(),
       compression: this.compression,
     });
@@ -164,27 +182,39 @@ export class BackupManager {
   }
 
   private async _backupCollection(
-    collection: mongoose.mongo.Collection<mongoose.mongo.BSON.Document>
+    collection: mongoose.mongo.Collection<mongoose.mongo.BSON.Document>,
+    dbAlias: string
   ) {
     const _collection = collection.find({});
 
-    this._data[_collection.namespace.collection || 'unknown'] =
-      await _collection.toArray();
+    if (!_collection) {
+      colorfulLog(`Collection ${collection.collectionName} not found`, 'error');
+      return;
+    }
+
+    const result = await _collection.toArray();
+
+    const _dbName = `${dbAlias}_${this._connection?.name || 'UNKNOWN'}`;
+    const _collectionName = _collection?.namespace?.collection || 'UNKNOWN';
+
+    const _data = { [_collectionName]: result };
+
+    //assigning the exported datat to "db name" > "collection name"
+    this._data[_dbName] = { ...this._data[_dbName], ..._data };
   }
 
   private async _connect(uri: string) {
-    this._connection = await mongoose.connect(uri);
+    this._connection = mongoose.createConnection(uri);
 
-    colorfulLog(`Connected to ${uri}`, 'info');
+    await this._connection?.getClient().connect().catch(console.log);
+
+    colorfulLog(`Connected to ${this._connection?.name}`, 'start');
   }
 
   private async _disconnect() {
-    await this._connection?.disconnect();
+    await this._connection?.close();
 
-    colorfulLog(
-      `Disconnected from ${this._connection?.connection.name}`,
-      'end'
-    );
+    colorfulLog(`Disconnected from ${this._connection?.name}`, 'end');
   }
 
   private _gzipCompression() {

@@ -4,6 +4,6 @@ import { getBackupRouter } from './get.js';
 const router = express.Router();
 
 // router.use('/cron');
-router.use('/', getBackupRouter);
+router.use('/get', getBackupRouter);
 
 export { router as backupRouter };
