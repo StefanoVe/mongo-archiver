@@ -1,6 +1,6 @@
 //boiler plate for an express post request
 import express from 'express';
-import { param } from 'express-validator';
+import { param, query } from 'express-validator';
 import { Types } from 'mongoose';
 import { BackupModel } from '../../../models/backup.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
@@ -10,14 +10,17 @@ const router = express.Router();
 router.get(
   '/:id?',
   param('id').optional().isMongoId().withMessage('id must be a valid mongo id'),
+  query('limit').optional().isInt().withMessage('limit must be an integer'),
   validateRequest,
   async (req, res) => {
     const { id } = req.params;
+    const { limit } = req.query;
 
     if (!id?.length) {
       const backups = await BackupModel.find({})
         .sort({ createdAt: -1 })
         .lean()
+        .limit(Number(limit || 0))
         .populate('cronJob databases');
 
       const mapped = backups.map((b) => ({
