@@ -167,3 +167,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.\*
+
+
+deploy.tar
+
+/dist
+
+.DS_Store

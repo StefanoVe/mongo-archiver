@@ -4,14 +4,16 @@
   "type": "module",
   "scripts": {
     "start": "nodemon --exec bun run src/index.ts",
-    "deploy": "cp ./Dockerfile ./dist/client && cp ./captain-definition ./dist/client && tar --strip-components=3 -cvf ./deploy.tar --exclude='*.map' ./dist/client/* && caprover deploy -t ./deploy.tar -n golden -a mongodb-backups && rm ./deploy.tar"
+    "prod": "bun run src/index.ts",
+    "deploy": "cp .Dockerfile ./dist/ && cp ./captain-definition ./dist/ && tar --strip-components=3 -cvf ./deploy.tar --exclude='*.map' ./dist/* && read -p 'Caprover Istance: ' givenInstance && echo you have entered:  $givenInstance && caprover deploy -t ./deploy.tar -n $givenInstance -a mongodb-backups && rm ./deploy.tar"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
     "@types/express": "^4.17.17",
     "@types/pako": "^2.0.0",
     "bun-types": "^0.5.0",
-    "express-validator": "^6.15.0"
+    "express-validator": "^6.15.0",
+    "read": "^2.0.0"
   },
   "dependencies": {
     "@types/node-cron": "^3.0.7",
