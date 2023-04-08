@@ -5,7 +5,7 @@
   "scripts": {
     "start": "bun --watch src/index.ts",
     "prod": "bun run src/index.ts",
-    "deploy": "cp .Dockerfile ./dist/ && cp ./captain-definition ./dist/ && tar --strip-components=3 -cvf ./deploy.tar --exclude='*.map' ./dist/* && read -p 'Caprover Istance: ' givenInstance && echo you have entered:  $givenInstance && caprover deploy -t ./deploy.tar -n $givenInstance -a mongo-archiver-api && rm ./deploy.tar"
+    "deploy": "tar -cvf ./deploy.tar --exclude='*.map' * && read -p 'Caprover Istance: ' givenInstance && echo you have entered:  $givenInstance && caprover deploy -t ./deploy.tar -n $givenInstance -a mongo-archiver-api && rm ./deploy.tar"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
