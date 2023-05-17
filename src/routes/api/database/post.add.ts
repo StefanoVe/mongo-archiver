@@ -2,8 +2,8 @@
 import express from 'express';
 import { body } from 'express-validator';
 import {
-  DatabaseModel,
   DATABASE_VALIDATION_MESSAGES,
+  DatabaseModel,
 } from '../../../models/database.js';
 import { validateRequest } from '../../../services/validation/service.validate-request.js';
 
@@ -13,7 +13,10 @@ router.post(
   '/',
   body('alias').isString().withMessage(DATABASE_VALIDATION_MESSAGES.alias),
   body('uri').isString().withMessage(DATABASE_VALIDATION_MESSAGES.uri),
-  body('enabled').isBoolean().withMessage(DATABASE_VALIDATION_MESSAGES.enabled),
+  body('enabled')
+    .optional()
+    .isBoolean()
+    .withMessage(DATABASE_VALIDATION_MESSAGES.enabled),
   validateRequest,
   async (req, res) => {
     const { alias, uri, enabled } = req.body;
@@ -35,7 +38,7 @@ router.post(
     const database = DatabaseModel.build({
       alias: _lowerCaseAlias,
       uri: _lowerCaseUri,
-      enabled,
+      enabled: enabled ?? true,
     });
 
     await database.save();
